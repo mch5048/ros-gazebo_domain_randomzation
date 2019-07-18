@@ -186,6 +186,26 @@ public:
       this->beta = 0.0;
     }
     
+    // friction
+
+    if (_sdf->HasElement("chalk"))
+    {
+      this->chalk = _sdf->Get<std::string>("chalk");
+    }else
+    {
+      this->chalk = "";
+    }
+
+    if (_sdf->HasElement("cafe_table"))
+    {
+      this->cafe_table = _sdf->Get<std::string>("cafe_table");
+    }else
+    {
+      this->cafe_table = "";
+    }
+
+
+
     // yes if we want it to be active, no if we dont want elements of the scene to change colours and lights
     if (_sdf->HasElement("colour_randomiser_active"))
       this->colour_randomiser_active = _sdf->Get<std::string>("colour_randomiser_active");
@@ -248,9 +268,9 @@ public:
     this->lightPub->WaitForConnection();
     // ROS_DEBUG("Waiting for connection of Light Topic...DONE");
 
-    this->lightPub = this->node->Advertise<gazebo::msgs::Surface>("/gazebo/default/modify");
-    // ROS_DEBUG("Waiting for connection of Light Topic...");
-    this->lightPub->WaitForConnection();
+    // this->lightPub = this->node->Advertise<gazebo::msgs::Surface>("/gazebo/default/modify");
+    // // ROS_DEBUG("Waiting for connection of Light Topic...");
+    // this->lightPub->WaitForConnection();
 
 
 
@@ -377,11 +397,9 @@ public:
  void RandomiseModelFriction()
   {
     bool result = false;
-    std::string chalk ("chalk_3");
-    std::string table ("cafe_table");
-    result = this->ChangeModelFriction(chalk);
-    result = this->ChangeModelFriction(table);
 
+    result = this->ChangeModelFriction(this->chalk);
+    result = this->ChangeModelFriction(this->cafe_table);
   }
 
 
@@ -821,7 +839,6 @@ bool ChangeModelFriction(std::string modelName)
           surfODE->slip2 = rand_slip2;
           surfODE->slipTorsion = rand_slipTorsion;
 
-
       }else{ROS_ERROR("Link has no Element friction");}
 
     }
@@ -1061,9 +1078,9 @@ void addColors(gazebo::msgs::Visual & msg,
       boost::mutex::scoped_lock scoped_lock(lock);
       // ROS_WARN("You Called The service!");
 
-      this->RandomiseWorldModels();
+      // this->RandomiseWorldModels();
       this->RandomiseModelFriction();
-      this->RandomiseWorldLights();
+      // this->RandomiseWorldLights();
 
       return true;
   }
@@ -1093,8 +1110,11 @@ void addColors(gazebo::msgs::Visual & msg,
   
   /// \brief Maps light IDs to LightNames
   private: std::map<int, std::string> lightIDToName;
-  
-  
+
+  // std::string random_distribution_type = "uniform";
+
+  public: std::string chalk = "";
+  public: std::string cafe_table = "";
   // Time Memory
   double old_secs;
   // Frequency of update
