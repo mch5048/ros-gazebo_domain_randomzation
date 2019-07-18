@@ -10,8 +10,8 @@
 #include <gazebo/transport/transport.hh>
 #include "gazebo/msgs/msgs.hh"
 #include "gazebo/transport/TransportTypes.hh"
+#include "gazebo/physics/ode/ODESurfaceParams.hh" // for friction randomization
 #include <unistd.h>
-
 
 #include <boost/thread/mutex.hpp>
 #include "ros/callback_queue.h"
@@ -248,6 +248,12 @@ public:
     this->lightPub->WaitForConnection();
     // ROS_DEBUG("Waiting for connection of Light Topic...DONE");
 
+    this->lightPub = this->node->Advertise<gazebo::msgs::Surface>("/gazebo/default/modify");
+    // ROS_DEBUG("Waiting for connection of Light Topic...");
+    this->lightPub->WaitForConnection();
+
+
+
     // We wait for all system to be ready an amount of seconds
     float seconds_to_wait = 5.0;
     this->WaitForseconds(seconds_to_wait);
@@ -326,7 +332,6 @@ public:
 
   }
 
-
   // Called by the world update start event
   public: void OnUpdate()
   {
@@ -334,7 +339,7 @@ public:
 
     if (this->reseting_plugin)
     {
-        ROS_WARN("Reseting in Process, please wait...");
+        // ROS_WARN("Reseting in Process, please wait...");
     }else
     {
         // TODO: Check what is necessary now here
@@ -368,6 +373,18 @@ public:
     // ROS_DEBUG("Done waiting...");
 
   }
+
+ void RandomiseModelFriction()
+  {
+    bool result = false;
+    std::string chalk ("chalk_3");
+    std::string table ("cafe_table");
+    result = this->ChangeModelFriction(chalk);
+    result = this->ChangeModelFriction(table);
+
+  }
+
+
 
   void RandomiseWorldModels()
   {
@@ -418,7 +435,6 @@ public:
     }
 
   }
-
 
 
   void RandomiseWorldLights()
@@ -538,7 +554,7 @@ public:
 
     for (auto const& x : this->modelIDToName)
     {
-        ROS_INFO("ModelID=%i, Name=%s", x.first, x.second.c_str());
+        ;// ROS_INFO("ModelID=%i, Name=%s", x.first, x.second.c_str());
     }
 
     // ROS_INFO("END OutputWorldModelsData...");
@@ -594,6 +610,18 @@ public:
       std::mt19937 mt_rng(rng());
       double aux = ((double) uniform_dist(mt_rng)) / (double) RAND_MAX;
       return aux * (max - min) + min;
+  }
+
+
+  double getNormalDouble(double mean_val, float var)
+  {
+      // generate random double
+      std::random_device rd;
+      std::mt19937 mt_rd(rd());
+      double sample;
+      std::normal_distribution<double> normal_dist(mean_val, var);
+      sample = normal_dist(mt_rd);
+      return sample;
   }
 
 
@@ -680,8 +708,8 @@ public:
 
           visMsg = link->GetVisualMessage(visualName);
 
-          ROS_INFO("visualName=%s",visualName.c_str());
-          ROS_INFO("link->GetScopedName()=%s",link->GetScopedName().c_str());
+          // ROS_INFO("visualName=%s",visualName.c_str());
+          // ROS_INFO("link->GetScopedName()=%s",link->GetScopedName().c_str());
 
           visMsg.set_name(link->GetScopedName());
           //std::string visual_element_string = link->GetScopedName() + "::" + visualName;
@@ -701,6 +729,101 @@ public:
       
       this->lastKnownColors[model->GetId()] = newColor;
       ROS_DEBUG("END ChangeModelColour...");
+    }
+
+
+    return true;
+
+}
+
+bool ChangeModelFriction(std::string modelName)
+  {  
+    gazebo::physics::ModelPtr model = this->world->GetModel(modelName);
+
+    if (!model)
+    {
+      ROS_ERROR("Model named [%s] could not be found", modelName.c_str());
+      return false;
+    }
+
+    // std::vector<std::string> frictions {
+    //  "chalk_3"}; // right_l5 is not available 
+
+
+    for (auto link : model->GetLinks())
+    {
+      sdf::ElementPtr linkSDF = link->GetSDF();
+      std::string temp ("");
+
+      if (!linkSDF)
+      {
+        ROS_ERROR("Link had NULL SDF");
+        return false;
+      }else
+      {
+        temp = link->GetName().c_str();
+        // ROS_INFO("Link [%s] SDF found", temp);
+      }
+
+      if (linkSDF->HasElement("friction"))
+      {
+
+        // if (std::find(frictions.begin(), frictions.end(), temp) != frictions.end()) continue;
+
+          physics::Collision_V collisions = link->GetCollisions(); // get the collision elements from SDF
+          auto iter = collisions.begin(); // returns the iterator to the first element in a vector
+
+          //after reading in collision, now reads in surface.
+
+          auto surf = (*iter)->GetSurface();
+
+          auto surfODE = boost::static_pointer_cast<physics::ODESurfaceParams>(surf);
+
+          // get the current mu1, mu2, mu_torsion, patch_ratio, poisson's ratio 
+          
+          this->mu_torsion = surf->FrictionPyramid()->MuTorsion();
+          this->mu_1 = surf->FrictionPyramid()->MuPrimary();
+          this->mu_2 = surf->FrictionPyramid()->MuSecondary();
+          this->patch_radius = surf->FrictionPyramid()->PatchRadius();
+          this->poissons_ratio = surf->FrictionPyramid()->PoissonsRatio();
+          this->ela_mod = surf->FrictionPyramid()->ElasticModulus();
+          this->kp = surfODE->kp;
+          this->kd = surfODE->kd;
+          this->slip1 = surfODE->slip1;
+          this->slip2 = surfODE->slip2;
+          this->slipTorsion = surfODE->slipTorsion;
+          /*  randomize the surface parameters here */
+
+          double rand_mu_tors = getNormalDouble(this->mu_torsion, 0.2);
+          double rand_mu_1 = getNormalDouble(this->mu_1, 0.2);
+          double rand_mu_2 = getNormalDouble(this->mu_2, 0.2);
+          double rand_patch_rad = getNormalDouble(this->patch_radius, 0.2);
+          double rand_poisson = getNormalDouble(this->poissons_ratio, 0.2);
+          
+          
+          double rand_kp = getNormalDouble(this->kp, 0.2);
+          double rand_kd = getNormalDouble(this->kd, 0.2);
+          double rand_slip1 = getNormalDouble(this->slip1, 0.2);
+          double rand_slip2 = getNormalDouble(this->slip2, 0.2);
+          double rand_slipTorsion = getNormalDouble(this->slipTorsion, 0.2);
+           
+
+          /*  set the randomized properties on the link surface*/
+          surf->FrictionPyramid()->SetMuTorsion(rand_mu_tors);
+          surf->FrictionPyramid()->SetMuPrimary(rand_mu_1);
+          surf->FrictionPyramid()->SetMuSecondary(rand_mu_2);
+          surf->FrictionPyramid()->SetPatchRadius(rand_patch_rad);
+          surf->FrictionPyramid()->SetPoissonsRatio(rand_poisson);
+
+          surfODE->kp = rand_kp;
+          surfODE->kd = rand_kd;
+          surfODE->slip1 = rand_slip1;
+          surfODE->slip2 = rand_slip2;
+          surfODE->slipTorsion = rand_slipTorsion;
+
+
+      }else{ROS_ERROR("Link has no Element friction");}
+
     }
 
 
@@ -809,7 +932,7 @@ void addColors(gazebo::msgs::Visual & msg,
               y_pos_rand = this->RandomFloatBeta(y_min_value, y_max_value);
             }else
             {
-              ROS_WARN("The Distribution is Not BETA.==%s", this->random_distribution_type.c_str());
+              // ROS_WARN("The Distribution is Not BETA.==%s", this->random_distribution_type.c_str());
               y_pos_rand = RandomFloat(y_min_value, y_max_value);
             }
             
@@ -855,10 +978,10 @@ void addColors(gazebo::msgs::Visual & msg,
             float pitch_rand = RandomFloat(this->cam_pitch_min, this->cam_pitch_max);
             float yaw_rand = RandomFloat(this->cam_yaw_min, this->cam_yaw_max);
 
-            ROS_WARN("CAM-RANDOM[X,Y,Z,Roll,Pitch,Yaw=[%f,%f,%f,%f,%f,%f], model=%s", x_pos_rand,y_pos_rand,z_pos_rand,roll_rand,pitch_rand,yaw_rand,model_name.c_str());
+            // ROS_WARN("CAM-RANDOM[X,Y,Z,Roll,Pitch,Yaw=[%f,%f,%f,%f,%f,%f], model=%s", x_pos_rand,y_pos_rand,z_pos_rand,roll_rand,pitch_rand,yaw_rand,model_name.c_str());
             gazebo::math::Pose initPose(math::Vector3(x_pos_rand, y_pos_rand, z_pos_rand), math::Quaternion(roll_rand, pitch_rand, yaw_rand));
             model->SetWorldPose(initPose);
-            ROS_WARN("Moving camera=%s....END",model_name.c_str());
+            // ROS_WARN("Moving camera=%s....END",model_name.c_str());
         }
     }
   }
@@ -926,7 +1049,7 @@ void addColors(gazebo::msgs::Visual & msg,
     boost::math::beta_distribution<> dist(this->alpha, this->beta);
     // Linear interpolation quantile.
     float randFromDist = quantile(dist, randFromUnif);
-    ROS_WARN("BETA RAND VALUE=%f....",randFromDist);
+    // ROS_WARN("BETA RAND VALUE=%f....",randFromDist);
     
     return randFromDist;
   }
@@ -936,9 +1059,10 @@ void addColors(gazebo::msgs::Visual & msg,
                                         std_srvs::Empty::Response &res)
   {
       boost::mutex::scoped_lock scoped_lock(lock);
-      ROS_WARN("You Called The service!");
+      // ROS_WARN("You Called The service!");
 
       this->RandomiseWorldModels();
+      this->RandomiseModelFriction();
       this->RandomiseWorldLights();
 
       return true;
@@ -1028,6 +1152,24 @@ void addColors(gazebo::msgs::Visual & msg,
   double cam_pitch_min = 0.0;
   double cam_yaw_max = 1.0;
   double cam_yaw_min = 0.0;
+
+  // frinction pyramid parameters
+  public: double mu_torsion = 0.0;
+  public: double ela_mod = 0.0;
+  public: double mu_1 = 0.0;
+  public: double mu_2 = 0.0;
+  public: double patch_radius = 0.0;
+  public: double poissons_ratio = 0.0;
+    /// \brief Spring constant equivalents of a contact.
+
+  // ODE surface parameters
+  public: double kp;
+  public: double kd;
+  public: double slip1;
+  public: double slip2;
+  public: double slipTorsion;
+
+
   
   std::string random_distribution_type = "uniform";
   double alpha = 2.0;
