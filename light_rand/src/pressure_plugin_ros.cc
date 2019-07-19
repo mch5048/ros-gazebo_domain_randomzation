@@ -73,12 +73,19 @@ void PressurePlugin::Load(sensors::SensorPtr _sensor, sdf::ElementPtr /*_sdf*/)
   for (unsigned int i = 0; i < collisionCount; ++i)
   {
     std::string collisionScopedName = this->parentSensor->GetCollisionName(i);
+
+    ROS_WARN("CollisionScopedName == %s", collisionScopedName);
+
     // Strip off ::collision_name to get link name
     std::string linkName = collisionScopedName.substr(0,
                            collisionScopedName.rfind("::"));
+    ROS_WARN("LinkName == %s", linkName);
     // Get unscoped name of collision
     std::string collisionName =
       collisionScopedName.substr(collisionScopedName.rfind("::") + 2);
+
+    ROS_WARN("CollisionName == %s", linkName);
+
     // Get physics pointers
     physics::EntityPtr entity = world->GetEntity(linkName);
     if (entity && entity->HasType(physics::Base::LINK))
@@ -161,6 +168,26 @@ void PressurePlugin::OnUpdate()
     std::map<std::string, gazebo::physics::Contact> contacts;
     std::map<std::string, gazebo::physics::Contact>::iterator iter2;
     contacts = this->parentSensor->Contacts(iter->first);
+
+    for (unsigned int i = 0; i < contacts.contact_size(); ++i)
+      {
+        std::cout << "Collision between[" << contacts.contact(i).collision1()
+                  << "] and [" << contacts.contact(i).collision2() << "]\n";
+
+        for (unsigned int j = 0; j < contacts.contact(i).position_size(); ++j)
+        {
+          std::cout << j << "  Position:"
+                    << contacts.contact(i).position(j).x() << " "
+                    << contacts.contact(i).position(j).y() << " "
+                    << contacts.contact(i).position(j).z() << "\n";
+          std::cout << "   Normal:"
+                    << contacts.contact(i).normal(j).x() << " "
+                    << contacts.contact(i).normal(j).y() << " "
+                    << contacts.contact(i).normal(j).z() << "\n";
+          std::cout << "   Depth:" << contacts.contact(i).depth(j) << "\n";
+        }
+      }
+
     for (iter2 = contacts.begin(); iter2 != contacts.end(); ++iter2)
     {
       for (int i = 0; i < iter2->second.count; ++i)
@@ -175,7 +202,7 @@ void PressurePlugin::OnUpdate()
         normalForceSum += normalForce;
       }
     }
-      ROS_WARN("Normal force sum == %f", normalForceSum);
+    ROS_WARN("Normal force sum == %f", normalForceSum);
 
     if (normalForceSum > 0)
     {
