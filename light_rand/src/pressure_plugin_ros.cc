@@ -169,29 +169,14 @@ void PressurePlugin::OnUpdate()
     std::map<std::string, gazebo::physics::Contact>::iterator iter2;
     contacts = this->parentSensor->Contacts(iter->first);
 
-    for (unsigned int i = 0; i < contacts.contact_size(); ++i)
-      {
-        std::cout << "Collision between[" << contacts.contact(i).collision1()
-                  << "] and [" << contacts.contact(i).collision2() << "]\n";
-
-        for (unsigned int j = 0; j < contacts.contact(i).position_size(); ++j)
-        {
-          std::cout << j << "  Position:"
-                    << contacts.contact(i).position(j).x() << " "
-                    << contacts.contact(i).position(j).y() << " "
-                    << contacts.contact(i).position(j).z() << "\n";
-          std::cout << "   Normal:"
-                    << contacts.contact(i).normal(j).x() << " "
-                    << contacts.contact(i).normal(j).y() << " "
-                    << contacts.contact(i).normal(j).z() << "\n";
-          std::cout << "   Depth:" << contacts.contact(i).depth(j) << "\n";
-        }
-      }
 
     for (iter2 = contacts.begin(); iter2 != contacts.end(); ++iter2)
     {
+
+
       for (int i = 0; i < iter2->second.count; ++i)
       {
+
         // TODO: determine whether body1Force or body2Force should be used.
         normalForce = iter2->second.normals[i].x *
                       iter2->second.wrench[i].body1Force.x +
