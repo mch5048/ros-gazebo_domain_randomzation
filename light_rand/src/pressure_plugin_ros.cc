@@ -73,12 +73,19 @@ void PressurePlugin::Load(sensors::SensorPtr _sensor, sdf::ElementPtr /*_sdf*/)
   for (unsigned int i = 0; i < collisionCount; ++i)
   {
     std::string collisionScopedName = this->parentSensor->GetCollisionName(i);
+
+    ROS_WARN("CollisionScopedName == %s", collisionScopedName);
+
     // Strip off ::collision_name to get link name
     std::string linkName = collisionScopedName.substr(0,
                            collisionScopedName.rfind("::"));
+    ROS_WARN("LinkName == %s", linkName);
     // Get unscoped name of collision
     std::string collisionName =
       collisionScopedName.substr(collisionScopedName.rfind("::") + 2);
+
+    ROS_WARN("CollisionName == %s", linkName);
+
     // Get physics pointers
     physics::EntityPtr entity = world->GetEntity(linkName);
     if (entity && entity->HasType(physics::Base::LINK))
@@ -161,10 +168,15 @@ void PressurePlugin::OnUpdate()
     std::map<std::string, gazebo::physics::Contact> contacts;
     std::map<std::string, gazebo::physics::Contact>::iterator iter2;
     contacts = this->parentSensor->Contacts(iter->first);
+
+
     for (iter2 = contacts.begin(); iter2 != contacts.end(); ++iter2)
     {
+
+
       for (int i = 0; i < iter2->second.count; ++i)
       {
+
         // TODO: determine whether body1Force or body2Force should be used.
         normalForce = iter2->second.normals[i].x *
                       iter2->second.wrench[i].body1Force.x +
@@ -175,7 +187,7 @@ void PressurePlugin::OnUpdate()
         normalForceSum += normalForce;
       }
     }
-      ROS_WARN("Normal force sum == %f", normalForceSum);
+    ROS_WARN("Normal force sum == %f", normalForceSum);
 
     if (normalForceSum > 0)
     {
