@@ -175,6 +175,8 @@ void PressurePlugin::OnUpdate()
         normalForceSum += normalForce;
       }
     }
+      ROS_WARN("Normal force sum == %f", normalForceSum);
+
     if (normalForceSum > 0)
     {
       tactileMsg.add_collision_name(iter->first);
