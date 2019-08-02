@@ -53,6 +53,7 @@ void ContactPlugin::Load(sensors::SensorPtr _sensor, sdf::ElementPtr /*_sdf*/)
   /*ROS RELATED*/
   this->rosNode.reset(new ros::NodeHandle("contact_plugin"));
   
+
   // this->initPublisher();
   // // index the topic according to the sensor index
   std::string ROStopicName = "/" + this->parentSensorName + "/contact";
@@ -85,6 +86,8 @@ void ContactPlugin::Load(sensors::SensorPtr _sensor, sdf::ElementPtr /*_sdf*/)
 
 void ContactPlugin::publishContact(bool iscontact, std::string body1name, int body1id, std::string body2name, int body2id)
 {
+
+
   domain_randomization::Contact msg;
   msg.is_contact = iscontact;
   msg.body1_name = body1name;
@@ -109,14 +112,13 @@ void ContactPlugin::OnUpdate()
     std::cout << "Collision between[" << contacts.contact(i).collision1()
               << "] and [" << contacts.contact(i).collision2() << "]\n";
 
+
+     if((contacts.contact(i).collision1().find(sawyer) != std::string::npos) || (contacts.contact(i).collision2().find(sawyer) != std::string::npos)) {
+        is_contact = true; 
       body1_name = contacts.contact(i).collision1();
       body1_id = contacts.contact(i).wrench(i).body_1_id();
       body2_name = contacts.contact(i).collision2();
       body2_id = contacts.contact(i).wrench(i).body_2_id();
-
-
-      if((body1_name.find(sawyer) != std::string::npos) || (body2_name.find(sawyer) != std::string::npos)) {
-        is_contact = true;       
        }
       else
       {
