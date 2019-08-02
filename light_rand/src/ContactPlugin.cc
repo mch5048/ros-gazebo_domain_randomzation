@@ -115,10 +115,10 @@ void ContactPlugin::OnUpdate()
 
      if((contacts.contact(i).collision1().find(sawyer) != std::string::npos) || (contacts.contact(i).collision2().find(sawyer) != std::string::npos)) {
         is_contact = true; 
-      body1_name = contacts.contact(i).collision1();
-      body1_id = contacts.contact(i).wrench(i).body_1_id();
-      body2_name = contacts.contact(i).collision2();
-      body2_id = contacts.contact(i).wrench(i).body_2_id();
+        body1_name = contacts.contact(i).collision1();
+        body1_id = contacts.contact(i).wrench(0).body_1_id();
+        body2_name = contacts.contact(i).collision2();
+        body2_id = contacts.contact(i).wrench(0).body_2_id();
        }
       else
       {
