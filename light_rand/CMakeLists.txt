@@ -8,7 +8,6 @@ add_definitions(-std=c++11)
 
 # Depend on system install of Gazebo
 find_package(gazebo REQUIRED
-
 )
 
 
@@ -24,6 +23,7 @@ find_package(catkin REQUIRED COMPONENTS
 add_message_files( DIRECTORY msg
 FILES
 Tactile.msg
+Contact.msg
 )
 
 generate_messages(
@@ -39,7 +39,6 @@ catkin_package(
 )
 
 
-
 link_directories(${GAZEBO_LIBRARY_DIRS})
 include_directories(${Boost_INCLUDE_DIR} ${catkin_INCLUDE_DIRS} ${GAZEBO_INCLUDE_DIRS})
 include_directories(${ADDITIONAL_INCLUDE_DIRS} ${OGRE_INCLUDE_DIRS}/Paging)
@@ -51,8 +50,10 @@ include_directories(${ADDITIONAL_INCLUDE_DIRS} ${OGRE_INCLUDE_DIRS}/Paging)
 # For dynamic_world_plugin plugin
 add_library(dynamic_world_plugin src/dynamic_world_plugin.cpp)
 add_library(pressure_plugin_ros src/pressure_plugin_ros.cc)
+add_library(contact_plugin_ros src/ContactPlugin.cc)
 target_link_libraries(dynamic_world_plugin ${catkin_LIBRARIES} ${GAZEBO_LIBRARIES})
 target_link_libraries(pressure_plugin_ros ${catkin_LIBRARIES} ${GAZEBO_LIBRARIES})
+target_link_libraries(contact_plugin_ros ${catkin_LIBRARIES} ${GAZEBO_LIBRARIES})
 
 
 
